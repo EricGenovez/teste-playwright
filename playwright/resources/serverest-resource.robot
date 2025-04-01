@@ -1,6 +1,7 @@
 *** Settings ***
 Library    Browser
 Library    FakerLibrary
+Library    DateTime
 
 
 *** Variables ***
@@ -14,7 +15,14 @@ ${SENHA}          12345
 Abrir o navegador
     New Browser    browser=${BROWSER}
     ...            headless=${HEADLESS}
-    New Context    viewport={"width": 1200, 'height': 800}
+    
+    ${TRACE_NAME}      FakerLibrary.Uuid 4
+    ${NOW}             Get Current Date    result_format=%d-%m-%Y_%H%M%S
+    ${RECORD_VIDEO}    Create Dictionary    dir=${OUTPUT_DIR}/evidencies/videos/${NOW}
+    
+    New Context    viewport={'width': 1200, 'height': 800}
+    ...            tracing=${OUTPUT_DIR}/evidencies/traces/${NOW}/${TRACE_NAME}.zip
+    ...            recordVideo=${RECORD_VIDEO}
 
 Ir para o site   
     New Page    url=${URL}
@@ -39,3 +47,26 @@ Conferir se o usuário foi cadastrado
     Wait For Elements State    h1    visible
     Get Text    h1    ==    Bem Vindo ${NAME}
     Get Element States    xpath=//*[@id="navbarTogglerDemo01"]/form/button    validate    value & visible
+
+Criar usuário via API
+    ${EMAIL}    FakerLibrary.Email
+    Set Test Variable    ${EMAIL}
+    ${resposta}    Http    url=https://serverest.dev/usuarios
+    ...                    method=POST
+    ...                    body={"nome": "Fulano da Silva","email": "${EMAIL}","password": "12345","administrador": "true"}
+    
+    Should Be Equal As Integers    ${resposta["status"]}    201
+
+Logar com o usuário cadastrado via API
+    ${resposta}    Http    url=https://serverest.dev/login
+    ...                    method=POST
+    ...                    body={"email": "${EMAIL}","password": "12345"}
+    
+    Should Be Equal As Integers    ${resposta["status"]}    200
+    LocalStorage Set Item    serverest/userEmail    ${EMAIL}
+    LocalStorage Set Item    serverest/userToken    ${resposta["body"]["authorization"]}
+    LocalStorage Set Item    serverest/userNome     Fulano da Silva
+
+    Go To    url=https://front.serverest.dev/admin/home
+
+    Take Screenshot

@@ -1,6 +1,7 @@
 *** Settings ***
-Library    Browser
+Library    Browser    enable_presenter_mode=${TRUE}
 Library    FakerLibrary
+Library    DateTime
 
 *** Variables ***
 ${BROWSER}    chromium
@@ -25,7 +26,14 @@ Tirar print
 Abrir o navegador
     New Browser    browser=${BROWSER}
     ...            headless=${HEADLESS}
-    New Context    viewport={"width":1280, 'height':800}
+    ${TRACE_NAME}      FakerLibrary.Uuid 4
+    ${NOW}             Get Current Date    result_format=%d-%m-%Y_%H%M%S
+    ${RECORD_VIDEO}    Create Dictionary    dir=${OUTPUT_DIR}/evidencies/videos/${NOW}
+    
+    New Context    viewport={'width': 1200, 'height': 800}
+    ...            tracing=${OUTPUT_DIR}/evidencies/traces/${NOW}/${TRACE_NAME}.zip
+    ...            recordVideo=${RECORD_VIDEO}
+
 Ir para o site
     New Page    url=${URL}
     ${title}    Get Title    ==    Front - ServeRest
